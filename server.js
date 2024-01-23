@@ -39,8 +39,6 @@ app.get('/api/data', (req, res) => {
 app.post('/api/invoice', (req, res) => {
     console.log('Received Invoice Data:', req.body);
     const { date, number, customer, rowsData } = req.body;
-    // const quantity = parseInt(rowsData[0].count) || 0;
-    // const price = parseInt(rowsData[0].price) || 0;
     console.log(rowsData[0].count);
     const insertSql = 'INSERT INTO invoice (date, number, customer, product_name, quantity, price) VALUES (?, ?, ?, ?, ?, ?)';
     const insertValues = [date, number, customer, rowsData[0].product_name, rowsData[0].quantity, rowsData[0].price];
