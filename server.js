@@ -1,10 +1,13 @@
 const express = require('express');
-const cors = require('cors');
+const bodyParser = require('body-parser');
 const app = express();
-const PORT = 3000;
+const cors = require('cors');
 
- 
-app.use(cors());
+app.use(cors({ origin: '*' }));
+app.use(bodyParser.json({ extended: true }));
+
+
+const PORT = 3000;
 
 const newData = [
     {
@@ -29,7 +32,7 @@ const newData = [
         "id": 4,
         "name": "Monitor",
         "count": 5,
-        "price": 150,
+        "price": 500,
     },
 ];
 
@@ -37,7 +40,21 @@ app.get('/api/data', (req, res) => {
     res.json(newData);
 });
 
+app.post('/api/invoice', (req, res) => {
+    console.log('Received Invoice Data:', req.body);
+    const { date, number, customer, rowsData } = req.body;
+    newData.push(req.body)
+    console.log('Data Structure:', typeof res);
+    res.status(200).json({ message: 'Invoice data received successfully' });
+});
+
+app.get('/api/invoice', (req, res) => {
+    res.send(newData);
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://192.168.88.41:${PORT}`);
 });
+
+
+
