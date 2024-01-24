@@ -1,8 +1,9 @@
+const express = require('express');
 const app = express();
 const cors = require('cors');
 const mysql = require('mysql');
-const express = require('express');
 const bodyParser = require('body-parser');
+
 
 app.use(cors({ origin: '*' }));
 app.use(bodyParser.json({ extended: true }));
@@ -23,18 +24,6 @@ db.connect(err => {
     } else {
         console.log('Connected to MySQL database');
     }
-});
-
-app.get('/api/data', (req, res) => {
-    const sql = 'SELECT * FROM invoice';
-    db.query(sql, (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Internal Server Error' });
-        } else {
-            res.json(result);
-        }
-    });
 });
 
 app.post('/api/invoice', (req, res) => {
@@ -62,5 +51,67 @@ app.get('/api/invoice', (req, res) => {
         }
     });
 });
+
+app.get('/api/nomenklatura', (req, res) => {
+    const sql = 'SELECT * FROM nomenklatura';
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Internal Server Error' });
+        } else {
+            res.json(result);
+        }
+    });
+});
+
+app.get('/api/kontragent', (req, res) => {
+    const sql = 'SELECT * FROM kontragent';
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ err: 'Internal Server Error' })
+        } else {
+            res.json(result)
+        }
+    })
+})
+
+app.get('/api/orders', (req, res) => {
+    const sql = 'SELECT * FROM orders';
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ err: 'Internal Server Error' })
+        } else {
+            res.json(result)
+        }
+    })
+})
+
+app.get('/api/routes', (req, res) => {
+    const sql = 'SELECT * FROM routes'
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ err: 'Internal server error' });
+        }
+        else {
+            res.json(result)
+        }
+    })
+})
+
+app.get('/api/casse_orders', (req, res) => {
+    const sql = 'SELECT * FROM casse_orders';
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ err: 'Internal server error' })
+        }
+        else {
+            res.json(result)
+        }
+    })
+})
 
 app.listen(PORT, () => { console.log(`http://192.168.88.41:${PORT}`) });
