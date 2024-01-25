@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');
 
 app.use(cors({ origin: '*' }));
 app.use(bodyParser.json({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: true }));
 
 const PORT = 3000;
 
@@ -27,15 +28,16 @@ db.connect(err => {
 });
 
 app.post('/api/invoice', (req, res) => {
-    const { date, number, customer, rowsData } = req.body;
+    const { date, number, customer, product_name, quantity, price } = req.body;
     const insertSql = 'INSERT INTO invoice (date, number, customer, product_name, quantity, price) VALUES (?, ?, ?, ?, ?, ?)';
-    const insertValues = [date, number, customer, rowsData[0].product_name, rowsData[0].quantity, rowsData[0].price];
+    const insertValues = [date, number, customer, product_name, quantity, price];
     db.query(insertSql, insertValues, (err, result) => {
         if (err) {
             console.error(err);
             res.status(500).json({ error: 'Internal Server Error' });
         } else {
             res.status(200).json({ message: 'Invoice data received successfully' });
+            console.log(res.status);
         }
     });
 });
@@ -60,6 +62,21 @@ app.get('/api/nomenklatura', (req, res) => {
             res.status(500).json({ error: 'Internal Server Error' });
         } else {
             res.json(result);
+        }
+    });
+});
+
+
+app.post('/api/nomenklatura', (req, res) => {
+    const { date, number, customer, rowsData } = req.body;
+    const insertSql = 'INSERT INTO nomenklatura (date, number, customer, product_name, quantity, price) VALUES (?, ?, ?, ?, ?, ?)';
+    const insertValues = [date, number, customer, rowsData[0].product_name, rowsData[0].quantity, rowsData[0].price];
+    db.query(insertSql, insertValues, (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Internal Server Error' });
+        } else {
+            res.status(200).json({ message: 'Invoice data received successfully' });
         }
     });
 });
@@ -114,4 +131,31 @@ app.get('/api/casse_orders', (req, res) => {
     })
 })
 
-app.listen(PORT, () => { console.log(`http://192.168.107.57:${PORT}`) });
+
+app.get('/api/category', (req, res) => {
+    const sql = 'SELECT * FROM category';
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ err: 'Internal server error' })
+        }
+        else {
+            res.json(result)
+        }
+    })
+})
+
+app.get('/api/price', (req,res) => {
+    const sql = 'SELECT * FROM price';
+    db.query( sql, (err, result) => {
+        if(err){
+            console.error(err);
+            res.status(500).json({err: 'Internal server error'})
+        }
+        else{
+            res.json(result)
+        }
+    })
+})
+
+app.listen(PORT, () => { console.log(`http://192.168.190.57:${PORT}`) });
