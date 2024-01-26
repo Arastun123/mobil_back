@@ -37,10 +37,10 @@ app.post('/api/invoice', (req, res) => {
             res.status(500).json({ error: 'Internal Server Error' });
         } else {
             res.status(200).json({ message: 'Invoice data received successfully' });
-            console.log(res.status);
         }
     });
 });
+
 
 app.get('/api/invoice', (req, res) => {
     const sql = 'SELECT * FROM invoice';
@@ -89,6 +89,35 @@ app.get('/api/kontragent', (req, res) => {
             res.status(500).json({ err: 'Internal Server Error' })
         } else {
             res.json(result)
+        }
+    })
+})
+
+app.post('/api/kontragent', (req, res) => {
+    const { name, phone_number, tin, address } = req.body;
+    const insertSql = 'INSERT INTO kontragent (name, phone_number, tin, address) VALUES (?, ?, ?, ?)';
+    const insertValues = [name, phone_number, tin, address ];
+    db.query(insertSql, insertValues, (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Internal Server Error' });
+        } else {
+            res.status(200).json({ message: 'Invoice data received successfully' });
+        }
+    });
+});
+
+app.post('/api/contract', (req,res) => {
+    const {name, number, date, type, company_name, comment} = req.body;
+    const insertSql = 'INSERT INTO (name, number, date, type, company_name, comment) VALUES ( ?, ?, ?, ?, ? )';
+    const insertValues = [name, number, date, type, company_name, comment]
+    db.query(insertSql, insertValues, (err, result) => {
+        if(err){
+            console.error(err);
+            res.status(500).json({ error: 'Insternal server error'})
+        }
+        else{
+            res.status(200).json( { message: 'Contarct data received successfully'})
         }
     })
 })
