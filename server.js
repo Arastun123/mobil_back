@@ -20,11 +20,8 @@ const db = mysql.createConnection({
 
 
 db.connect(err => {
-    if (err) {
-        console.error(err);
-    } else {
-        console.log('Connected to MySQL database');
-    }
+    if (err) console.error(err);
+    else  console.log('Connected to MySQL database');
 });
 
 
@@ -63,7 +60,6 @@ app.get('/api/kontragent', (req, res) => {
         }
     })
 })
-
 
 app.get('/api/orders', (req, res) => {
     const sql = 'SELECT * FROM orders';
@@ -230,4 +226,5 @@ app.post('/api/cassa_orders', (req, res) => {
         }
     })
 })
+
 app.listen(PORT, () => { console.log(`http://192.168.190.57:${PORT}`) });
