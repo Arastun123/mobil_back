@@ -60,7 +60,7 @@ app.get('/api/kontragent', (req, res) => {
         }
     })
 })
-
+ 
 app.get('/api/orders', (req, res) => {
     const sql = 'SELECT * FROM orders';
     db.query(sql, (err, result) => {
@@ -140,10 +140,20 @@ app.post('/api/nomenklatura', (req, res) => {
 });
 
 app.post('/api/invoice', (req, res) => {
-    const { date, number, customer, product_name, quantity, price } = req.body;
-    const insertSql = 'INSERT INTO invoice (date, number, customer, product_name, quantity, price) VALUES (?, ?, ?, ?, ?, ?)';
-    const insertValues = [date, number, customer, product_name, quantity, price];
-    db.query(insertSql, insertValues, (err, result) => {
+    const { date, number, customer, formTable } = req.body;
+    const insertSql = 'INSERT INTO invoice (date, number, customer, product_name, quantity, units, price) VALUES ?';
+
+    const insertValues = formTable.map(item => [
+        date,
+        number,
+        customer,
+        item.product_name,
+        parseInt(item.quantity),
+        item.units,
+        parseFloat(item.price),
+    ]);
+
+    db.query(insertSql, [insertValues], (err, result) => {
         if (err) {
             console.error(err);
             res.status(500).json({ error: 'Internal Server Error' });
@@ -152,6 +162,8 @@ app.post('/api/invoice', (req, res) => {
         }
     });
 });
+
+
 
 app.post('/api/kontragent', (req, res) => {
     const { name, phone_number, tin, address } = req.body;
