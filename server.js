@@ -18,7 +18,6 @@ const db = mysql.createConnection({
     database: 'appdb',
 });
 
-
 db.connect(err => {
     if (err) console.error(err);
     else  console.log('Connected to MySQL database');
@@ -210,18 +209,27 @@ app.post('/api/routes', (req,res) => {
 })
 
 app.post('/api/orders', (req,res) => {
-    const { date, amount } = req.body;
-    const insertSql = 'INSERT INTO orders ( date, amount ) VALUES ( ?, ? )';
-    const insertValues = [ date, amount ]
-    db.query(insertSql, insertValues, (err, result) => {
-        if(err){
+    const { date, customer, formTable } =
+     req.body;
+    const insertSql = 'INSERT INTO orders (date, customer, product_name, price, quantity, units) VALUES ?';
+
+    const insertValues = formTable.map(item => [
+        date,
+        customer,
+        item.product_name,
+        parseFloat(item.price),
+        parseInt(item.quantity),
+        item.units,
+    ]);
+
+    db.query(insertSql, [insertValues], (err, result) => {
+        if (err) {
             console.error(err);
-            res.status(500).json({ error: 'Internal server error'})
+            res.status(500).json({ error: 'Internal Server Error' });
+        } else {
+            res.status(200).json({ message: 'Invoice data received successfully' });
         }
-        else{
-            res.status(200).json( { message: 'Contarct data received successfully'})
-        }
-    })
+    });
 })
 
 app.post('/api/cassa_orders', (req, res) => {
@@ -239,4 +247,4 @@ app.post('/api/cassa_orders', (req, res) => {
     })
 })
 
-app.listen(PORT, () => { console.log(`http://192.168.190.57:${PORT}`) });
+app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) });
