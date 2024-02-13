@@ -124,20 +124,6 @@ app.get('/api/price', (req,res) => {
     })
 })
 
-app.post('/api/nomenklatura', (req, res) => {
-    const { date, number, customer, rowsData } = req.body;
-    const insertSql = 'INSERT INTO nomenklatura (date, number, customer, product_name, quantity, price) VALUES (?, ?, ?, ?, ?, ?)';
-    const insertValues = [date, number, customer, rowsData[0].product_name, rowsData[0].quantity, rowsData[0].price];
-    db.query(insertSql, insertValues, (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Internal Server Error' });
-        } else {
-            res.status(200).json({ message: 'Invoice data received successfully' });
-        }
-    });
-});
-
 app.post('/api/invoice', (req, res) => {
     const { date, number, customer, formTable } = req.body;
     const insertSql = 'INSERT INTO invoice (date, number, customer, product_name, quantity, units, price) VALUES ?';
@@ -162,8 +148,6 @@ app.post('/api/invoice', (req, res) => {
     });
 });
 
-
-
 app.post('/api/kontragent', (req, res) => {
     const { name, phone_number, tin, address } = req.body;
     const insertSql = 'INSERT INTO kontragent (name, phone_number, tin, address) VALUES (?, ?, ?, ?)';
@@ -177,6 +161,21 @@ app.post('/api/kontragent', (req, res) => {
         }
     });
 });
+
+app.post('/api/nomenklatura', (req,res) => {
+    const { name, category, brand, price, kind } = req.body;
+    const insertSql = 'INSERT INTO nomenklatura (name, category, brand, price, kind) VALUES (?, ?, ?, ?, ?)';
+    const insertValues = [ name, category, brand, price, kind ];
+    db.query(insertSql, insertValues, (err, result) => {
+        if(err) {
+            console.error(err);
+            res.status(500).json( {error: 'Internal Server Error'} )
+        }
+        else {
+            res.status(200).json({ message: 'Nomenklatura data received successfully' });
+        }
+    })
+})
 
 app.post('/api/contract', (req,res) => {
     const {name, number, date, type, company_name, comment} = req.body;
