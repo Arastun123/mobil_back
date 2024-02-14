@@ -263,5 +263,17 @@ app.put('/api/edit/:id', (req,res) => {
     
 })
 
+app.delete('/api/delete/:id/:tableName', (req, res) => {
+    const { id, tableName } = req.params;
+    const deleteSql = `DELETE FROM ${tableName} WHERE id = ?`
+    db.query(deleteSql, [id, tableName], (error, result) => {
+        if(error){
+            console.error(error)
+            res.status(500).json({ error: 'Internal server error'})
+        } else{
+            res.status(200).json({ message: 'Məlumat silindi'})
+        }
+    }) 
+})
 
 app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) });
