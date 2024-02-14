@@ -232,7 +232,7 @@ app.post('/api/orders', (req,res) => {
 })
 
 app.post('/api/cassa_orders', (req, res) => {
-    const {date, kontragentId, amount} = rreq.body;
+    const {date, kontragentId, amount} = req.body;
     const insertSql = 'INSERT INTO casse_orders (date, kontragentId, amount) VALUES (?, ?, ?)';
     const insertValues = [date, kontragentId, amount];
     db.query(insertSql, insertValues, (err, result) => {
@@ -245,5 +245,23 @@ app.post('/api/cassa_orders', (req, res) => {
         }
     })
 })
+
+
+app.put('/api/edit/:id', (req,res) => {
+    const { id } = req.params;
+    const newData = req.body; 
+    const updateSql = 'UPDATE nomenklatura SET ? WHERE id = ?';
+    
+    db.query(updateSql, [newData, id], (error, result) => {
+        if (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.status(200).json({ message: 'Məlumat yeniləndi' });
+        }
+    });
+    
+})
+
 
 app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) });
