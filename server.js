@@ -246,11 +246,10 @@ app.post('/api/cassa_orders', (req, res) => {
     })
 })
 
-
-app.put('/api/edit/:id', (req,res) => {
-    const { id } = req.params;
+app.put('/api/edit/:id/:tableName', (req,res) => {
+    const { id , tableName} = req.params;
     const newData = req.body; 
-    const updateSql = 'UPDATE nomenklatura SET ? WHERE id = ?';
+    const updateSql = `UPDATE ${tableName} SET ? WHERE id = ?`;
     
     db.query(updateSql, [newData, id], (error, result) => {
         if (error) {
