@@ -124,6 +124,17 @@ app.get('/api/price', (req,res) => {
     })
 })
 
+app.get('/api/contract', (req, res) => {
+    const sql = 'SELECT * FROM contract'
+    db.query(sql, (error, result) => {
+        if(error){
+            console.error(error);
+            res.status(500).json({ error: 'Internal server error'});
+        }
+        else res.json(result);
+    })
+});
+
 app.post('/api/invoice', (req, res) => {
     const { date, number, customer, formTable } = req.body;
     const insertSql = 'INSERT INTO invoice (date, number, customer, product_name, quantity, units, price) VALUES ?';
