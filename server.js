@@ -20,7 +20,7 @@ const db = mysql.createConnection({
 
 db.connect(err => {
     if (err) console.error(err);
-    else  console.log('Connected to MySQL database');
+    else console.log('Connected to MySQL database');
 });
 
 
@@ -59,7 +59,7 @@ app.get('/api/kontragent', (req, res) => {
         }
     })
 })
- 
+
 app.get('/api/orders', (req, res) => {
     const sql = 'SELECT * FROM orders';
     db.query(sql, (err, result) => {
@@ -111,14 +111,14 @@ app.get('/api/category', (req, res) => {
     })
 })
 
-app.get('/api/price', (req,res) => {
+app.get('/api/price', (req, res) => {
     const sql = 'SELECT * FROM price';
-    db.query( sql, (err, result) => {
-        if(err){
+    db.query(sql, (err, result) => {
+        if (err) {
             console.error(err);
-            res.status(500).json({err: 'Internal server error'})
+            res.status(500).json({ err: 'Internal server error' })
         }
-        else{
+        else {
             res.json(result)
         }
     })
@@ -127,9 +127,9 @@ app.get('/api/price', (req,res) => {
 app.get('/api/contract', (req, res) => {
     const sql = 'SELECT * FROM contract'
     db.query(sql, (error, result) => {
-        if(error){
+        if (error) {
             console.error(error);
-            res.status(500).json({ error: 'Internal server error'});
+            res.status(500).json({ error: 'Internal server error' });
         }
         else res.json(result);
     })
@@ -162,7 +162,7 @@ app.post('/api/invoice', (req, res) => {
 app.post('/api/kontragent', (req, res) => {
     const { name, phone_number, tin, address } = req.body;
     const insertSql = 'INSERT INTO kontragent (name, phone_number, tin, address) VALUES (?, ?, ?, ?)';
-    const insertValues = [name, phone_number, tin, address ];
+    const insertValues = [name, phone_number, tin, address];
     db.query(insertSql, insertValues, (err, result) => {
         if (err) {
             console.error(err);
@@ -173,14 +173,14 @@ app.post('/api/kontragent', (req, res) => {
     });
 });
 
-app.post('/api/nomenklatura', (req,res) => {
+app.post('/api/nomenklatura', (req, res) => {
     const { name, category, brand, price, kind } = req.body;
     const insertSql = 'INSERT INTO nomenklatura (name, category, brand, price, kind) VALUES (?, ?, ?, ?, ?)';
-    const insertValues = [ name, category, brand, price, kind ];
+    const insertValues = [name, category, brand, price, kind];
     db.query(insertSql, insertValues, (err, result) => {
-        if(err) {
+        if (err) {
             console.error(err);
-            res.status(500).json( {error: 'Internal Server Error'} )
+            res.status(500).json({ error: 'Internal Server Error' })
         }
         else {
             res.status(200).json({ message: 'Nomenklatura data received successfully' });
@@ -188,39 +188,39 @@ app.post('/api/nomenklatura', (req,res) => {
     })
 })
 
-app.post('/api/contract', (req,res) => {
-    const {name, number, date, type, company_name, comment} = req.body;
+app.post('/api/contract', (req, res) => {
+    const { name, number, date, type, company_name, comment } = req.body;
     const insertSql = 'INSERT INTO contract (name, number, date, type, company_name, comment) VALUES ( ?, ?, ?, ?, ?, ? )';
     const insertValues = [name, number, date, type, company_name, comment]
     db.query(insertSql, insertValues, (err, result) => {
-        if(err){
+        if (err) {
             console.error(err);
-            res.status(500).json({ error: 'Insternal server error'})
+            res.status(500).json({ error: 'Insternal server error' })
         }
-        else{
-            res.status(200).json( { message: 'Contarct data received successfully'})
+        else {
+            res.status(200).json({ message: 'Contarct data received successfully' })
         }
     })
 })
 
-app.post('/api/routes', (req,res) => {
+app.post('/api/routes', (req, res) => {
     const { date, kontragentId, amount } = req.body;
     const insertSql = 'INSERT INTO routes ( date, kontragentId, amount ) VALUES ( ?, ?, ? )';
-    const insertValues = [ date, kontragentId, amount ]
+    const insertValues = [date, kontragentId, amount]
     db.query(insertSql, insertValues, (err, result) => {
-        if(err){
+        if (err) {
             console.error(err);
-            res.status(500).json({ error: 'Insternal server error'})
+            res.status(500).json({ error: 'Insternal server error' })
         }
-        else{
-            res.status(200).json( { message: 'Contarct data received successfully'})
+        else {
+            res.status(200).json({ message: 'Contarct data received successfully' })
         }
     })
 })
 
-app.post('/api/orders', (req,res) => {
+app.post('/api/orders', (req, res) => {
     const { date, customer, formTable } =
-     req.body;
+        req.body;
     const insertSql = 'INSERT INTO orders (date, customer, product_name, price, quantity, units) VALUES ?';
 
     const insertValues = formTable.map(item => [
@@ -243,47 +243,58 @@ app.post('/api/orders', (req,res) => {
 })
 
 app.post('/api/cassa_orders', (req, res) => {
-    const {date, kontragentId, amount} = req.body;
+    const { date, kontragentId, amount } = req.body;
     const insertSql = 'INSERT INTO casse_orders (date, kontragentId, amount) VALUES (?, ?, ?)';
     const insertValues = [date, kontragentId, amount];
     db.query(insertSql, insertValues, (err, result) => {
-        if(err){
+        if (err) {
             console.error(err);
-            res.status(500).json({ error: 'Internal server error'})
+            res.status(500).json({ error: 'Internal server error' })
         }
         else {
-            res.status(200).json( { message: 'Date received'})
+            res.status(200).json({ message: 'Date received' })
         }
     })
 })
 
-app.put('/api/edit/:id/:tableName', (req,res) => {
-    const { id , tableName} = req.params;
-    const newData = req.body; 
-    const updateSql = `UPDATE ${tableName} SET ? WHERE id = ?`;
-    
-    db.query(updateSql, [newData, id], (error, result) => {
-        if (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal server error' });
-        } else {
-            res.status(200).json({ message: 'Məlumat yeniləndi' });
-        }
+app.put('/api/edit/:id/:tableName', (req, res) => {
+    const { tableName } = req.params;
+    const newData = req.body;
+
+    const updateQueries = newData.map((data) => {
+        const id = data.id;
+        delete data.id;
+
+        const setClause = Object.keys(data).map((key) => `${key} = ?`).join(', ');
+        return `UPDATE ${tableName} SET ${setClause} WHERE id = ${id}`;
     });
-    
-})
+
+    updateQueries.forEach((updateSql, index) => {
+        db.query(updateSql, Object.values(newData[index]), (error, result) => {
+            if (error) {
+                console.error(error);
+                res.status(500).json({ error: 'Internal server error' });
+            } else {
+                console.log(`Row with id ${newData[index].id} updated successfully`);
+            }
+        });
+    });
+
+    res.status(200).json({ message: 'Məlumatlar yeniləndi' });
+});
+
 
 app.delete('/api/delete/:id/:tableName', (req, res) => {
     const { id, tableName } = req.params;
     const deleteSql = `DELETE FROM ${tableName} WHERE id = ?`
     db.query(deleteSql, [id, tableName], (error, result) => {
-        if(error){
+        if (error) {
             console.error(error)
-            res.status(500).json({ error: 'Internal server error'})
-        } else{
-            res.status(200).json({ message: 'Məlumat silindi'})
+            res.status(500).json({ error: 'Internal server error' })
+        } else {
+            res.status(200).json({ message: 'Məlumat silindi' })
         }
-    }) 
+    })
 })
 
 app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) });
