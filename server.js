@@ -135,6 +135,20 @@ app.get('/api/contract', (req, res) => {
     })
 });
 
+app.get('/api/products', (req, res) => {
+    const query = req.query.query.toLowerCase();
+
+    db.query('SELECT * FROM products WHERE name LIKE ?', [`%${query}%`], (error, results) => {
+        if (error) {
+            console.error('Error executing MySQL query:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+            return;
+        }
+
+        res.json(results);
+    });
+});
+
 app.post('/api/invoice', (req, res) => {
     const { date, number, customer, formTable } = req.body;
     const insertSql = 'INSERT INTO invoice (date, number, customer, product_name, quantity, units, price) VALUES ?';
@@ -258,29 +272,25 @@ app.post('/api/cassa_orders', (req, res) => {
 })
 
 app.put('/api/edit/:id/:tableName', (req, res) => {
-    const { tableName } = req.params;
-    const newData = req.body;
+    const { id, tableName } = req.params;
+    const { updatedRows, date, customer, number } = req.body;
+    const updatedRow = updatedRows[0];
 
-    const updateQueries = newData.map((data) => {
-        const id = data.id;
-        delete data.id;
+    const updateSql = `UPDATE ${tableName} SET price=?, product_name=?, quantity=?, units=?, date=?, customer=?, number=? WHERE id=?`;
+    const updateValues = [updatedRow.price, updatedRow.product_name, updatedRow.quantity, updatedRow.units, date, customer, number, id];
 
-        const setClause = Object.keys(data).map((key) => `${key} = ?`).join(', ');
-        return `UPDATE ${tableName} SET ${setClause} WHERE id = ${id}`;
-    });
-
-    updateQueries.forEach((updateSql, index) => {
-        db.query(updateSql, Object.values(newData[index]), (error, result) => {
-            if (error) {
-                console.error(error);
-                res.status(500).json({ error: 'Internal server error' });
+    db.query(updateSql, updateValues, (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        } else {
+            if (result.affectedRows > 0) {
+                res.status(200).json({ success: true, message: 'Məlumat yeniləndi' });
             } else {
-                console.log(`Row with id ${newData[index].id} updated successfully`);
+                res.status(404).json({ success: false, message: 'Record not found' });
             }
-        });
+        }
     });
-
-    res.status(200).json({ message: 'Məlumatlar yeniləndi' });
 });
 
 
