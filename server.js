@@ -24,8 +24,10 @@ db.connect(err => {
 });
 
 
-app.get('/api/invoice', (req, res) => {
-    const sql = 'SELECT * FROM invoice';
+app.get('/api/:tableName', (req, res) => {
+    const { tableName } = req.params;
+    const sql = `SELECT * FROM ${tableName}`;
+    
     db.query(sql, (err, result) => {
         if (err) {
             console.error(err);
@@ -36,106 +38,7 @@ app.get('/api/invoice', (req, res) => {
     });
 });
 
-app.get('/api/nomenklatura', (req, res) => {
-    const sql = 'SELECT * FROM nomenklatura';
-    db.query(sql, (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Internal Server Error' });
-        } else {
-            res.json(result);
-        }
-    });
-});
-
-app.get('/api/kontragent', (req, res) => {
-    const sql = 'SELECT * FROM kontragent';
-    db.query(sql, (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ err: 'Internal Server Error' })
-        } else {
-            res.json(result)
-        }
-    })
-})
-
-app.get('/api/orders', (req, res) => {
-    const sql = 'SELECT * FROM orders';
-    db.query(sql, (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ err: 'Internal Server Error' })
-        } else {
-            res.json(result)
-        }
-    })
-})
-
-app.get('/api/routes', (req, res) => {
-    const sql = 'SELECT * FROM routes'
-    db.query(sql, (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ err: 'Internal server error' });
-        }
-        else {
-            res.json(result)
-        }
-    })
-})
-
-app.get('/api/casse_orders', (req, res) => {
-    const sql = 'SELECT * FROM casse_orders';
-    db.query(sql, (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ err: 'Internal server error' })
-        }
-        else {
-            res.json(result)
-        }
-    })
-})
-
-app.get('/api/category', (req, res) => {
-    const sql = 'SELECT * FROM category';
-    db.query(sql, (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ err: 'Internal server error' })
-        }
-        else {
-            res.json(result)
-        }
-    })
-})
-
-app.get('/api/price', (req, res) => {
-    const sql = 'SELECT * FROM price';
-    db.query(sql, (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ err: 'Internal server error' })
-        }
-        else {
-            res.json(result)
-        }
-    })
-})
-
-app.get('/api/contract', (req, res) => {
-    const sql = 'SELECT * FROM contract'
-    db.query(sql, (error, result) => {
-        if (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
-        else res.json(result);
-    })
-});
-
-app.get('/api/products', (req, res) => {
+app.get('/api/autoProducts', (req, res) => {
     const query = req.query.query.toLowerCase();
 
     db.query('SELECT * FROM products WHERE name LIKE ?', [`%${query}%`], (error, results) => {
@@ -174,9 +77,9 @@ app.post('/api/invoice', (req, res) => {
 });
 
 app.post('/api/kontragent', (req, res) => {
-    const { name, phone_number, tin, address } = req.body;
-    const insertSql = 'INSERT INTO kontragent (name, phone_number, tin, address) VALUES (?, ?, ?, ?)';
-    const insertValues = [name, phone_number, tin, address];
+    const { name, phone_number, tin, address, type } = req.body;
+    const insertSql = 'INSERT INTO kontragent (name, phone_number, tin, address, type) VALUES (?, ?, ?, ?, ?)';
+    const insertValues = [name, phone_number, tin, address, type];
     db.query(insertSql, insertValues, (err, result) => {
         if (err) {
             console.error(err);
@@ -233,8 +136,7 @@ app.post('/api/routes', (req, res) => {
 })
 
 app.post('/api/orders', (req, res) => {
-    const { date, customer, formTable } =
-        req.body;
+    const { date, customer, formTable } = req.body;
     const insertSql = 'INSERT INTO orders (date, customer, product_name, price, quantity, units) VALUES ?';
 
     const insertValues = formTable.map(item => [
@@ -271,6 +173,39 @@ app.post('/api/cassa_orders', (req, res) => {
     })
 })
 
+app.post('/api/products', (req, res) => {
+    const { formTable } = req.body;
+    const newNames = formTable.map(item => item.name);
+
+    const selectSql = 'SELECT name FROM products WHERE name IN (?)';
+    db.query(selectSql, [newNames], (selectErr, selectResult) => {
+        if (selectErr) {
+            console.error(selectErr);
+            res.status(500).json({ error: 'Internal server error' });
+            return;
+        }
+        const existingNames = selectResult.map(row => row.name);
+        const namesToInsert = newNames.filter(name => !existingNames.includes(name));
+
+        if (namesToInsert.length > 0) {
+            const insertSql = 'INSERT INTO products (name) VALUES ?';
+            const insertValues = namesToInsert.map(name => [name]);
+
+            db.query(insertSql, [insertValues], (insertErr, insertResult) => {
+                if (insertErr) {
+                    console.error(insertErr);
+                    res.status(500).json({ error: 'Internal server error' });
+                } else {
+                    res.status(200).json({ message: 'Data received' });
+                }
+            });
+        } else {
+            res.status(400).json({ message: 'All data already exists in the database' });
+        }
+    });
+});
+
+
 app.put('/api/edit/:id/:tableName', (req, res) => {
     const { id, tableName } = req.params;
     const { updatedRows, date, customer, number } = req.body;
@@ -293,6 +228,31 @@ app.put('/api/edit/:id/:tableName', (req, res) => {
     });
 });
 
+
+app.put('/api/products', (req, res) => {
+    const updatedDataArray = req.body;
+   
+    try {
+        for (const updatedData of updatedDataArray) {
+            const { id, name } = updatedData;
+
+            const updateSql = 'UPDATE products SET name = ? WHERE id = ?';
+            const updateValues = [name, id];
+
+            db.query(updateSql, updateValues, (err, result) => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).json({ success: false, message: 'Internal server error' });
+                }
+            });
+        }
+
+        res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
 
 app.delete('/api/delete/:id/:tableName', (req, res) => {
     const { id, tableName } = req.params;
