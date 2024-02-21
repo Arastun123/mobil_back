@@ -38,7 +38,7 @@ app.get('/api/:tableName', (req, res) => {
     });
 });
 
-app.get('/api/autoProducts', (req, res) => {
+app.get('/endpoint/autoProducts', (req, res) => {
     const query = req.query.query.toLowerCase();
 
     db.query('SELECT * FROM products WHERE name LIKE ?', [`%${query}%`], (error, results) => {
@@ -211,7 +211,7 @@ app.put('/api/edit/:id/:tableName', (req, res) => {
     const { updatedRows, date, customer, number } = req.body;
     const updatedRow = updatedRows[0];
 
-    const updateSql = `UPDATE ${tableName} SET price=?, product_name=?, quantity=?, units=?, date=?, customer=?, number=? WHERE id=?`;
+    const updateSql = `UPDATE ${tableName} SET price=?, date=?, customer=? WHERE id=?`;
     const updateValues = [updatedRow.price, updatedRow.product_name, updatedRow.quantity, updatedRow.units, date, customer, number, id];
 
     db.query(updateSql, updateValues, (err, result) => {
