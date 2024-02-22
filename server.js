@@ -27,7 +27,7 @@ db.connect(err => {
 app.get('/api/:tableName', (req, res) => {
     const { tableName } = req.params;
     const sql = `SELECT * FROM ${tableName}`;
-    
+
     db.query(sql, (err, result) => {
         if (err) {
             console.error(err);
@@ -54,17 +54,17 @@ app.get('/endpoint/autoProducts', (req, res) => {
 
 app.post('/api/invoice', (req, res) => {
     const { date, number, customer, formTable } = req.body;
-    const insertSql = 'INSERT INTO invoice (date, number, customer, product_name, quantity, units, price) VALUES ?';
+    const insertSql = 'INSERT INTO invoice (date, number, customer, quantity, total, product_name) VALUES ?';
 
     const insertValues = formTable.map(item => [
         date,
         number,
         customer,
-        item.product_name,
         parseInt(item.quantity),
-        item.units,
-        parseFloat(item.price),
+        parseFloat(item.total),
+        product_name,
     ]);
+    console.log(insertValues);
 
     db.query(insertSql, [insertValues], (err, result) => {
         if (err) {
@@ -206,13 +206,13 @@ app.post('/api/products', (req, res) => {
 });
 
 
-app.put('/api/edit/:id/:tableName', (req, res) => {
-    const { id, tableName } = req.params;
+app.put('/api/invoice/:id', (req, res) => {
+    const { id } = req.params;
     const { updatedRows, date, customer, number } = req.body;
     const updatedRow = updatedRows[0];
 
-    const updateSql = `UPDATE ${tableName} SET price=?, date=?, customer=? WHERE id=?`;
-    const updateValues = [updatedRow.price, updatedRow.product_name, updatedRow.quantity, updatedRow.units, date, customer, number, id];
+    const updateSql = `UPDATE invoice SET quantity=?, total=?, date=?, customer=?, number=? WHERE id=?`;
+    const updateValues = [updatedRow.quantity, updatedRow.total, date, customer, number, id];
 
     db.query(updateSql, updateValues, (err, result) => {
         if (err) {
@@ -228,10 +228,48 @@ app.put('/api/edit/:id/:tableName', (req, res) => {
     });
 });
 
+app.put('/api/edit/:tableName', (req, res) => {
+    const { tableName } = req.params;
+    const { updatedRows } = req.body;
+    console.log(updatedRows);
+
+    if (Array.isArray(updatedRows)) {
+        let totalAffectedRows = 0;
+        let processedRows = 0;
+
+        updatedRows.forEach(updatedRow => {
+            const updateSql = `UPDATE ${tableName} SET name=?, category=?, brand=?, price=?, kind=? WHERE id=?`;
+            const updateValues = [updatedRow.name, updatedRow.category, updatedRow.brand, updatedRow.price, updatedRow.kind, updatedRow.id];
+
+            db.query(updateSql, updateValues, (err, result) => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).json({ success: false, message: 'Internal server error' });
+                    return;  
+                }
+
+                totalAffectedRows += result.affectedRows;
+                processedRows++;
+
+                if (processedRows === updatedRows.length) {
+                    if (totalAffectedRows > 0) {
+                        res.status(200).json({ success: true, message: 'Məlumat yeniləndi' });
+                    } else {
+                        res.status(404).json({ success: false, message: 'Record not found' });
+                    }
+                }
+            });
+        });
+    } else {
+        console.error('data is not an array');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 
 app.put('/api/products', (req, res) => {
     const updatedDataArray = req.body;
-   
+
     try {
         for (const updatedData of updatedDataArray) {
             const { id, name } = updatedData;
@@ -265,6 +303,23 @@ app.delete('/api/delete/:id/:tableName', (req, res) => {
             res.status(200).json({ message: 'Məlumat silindi' })
         }
     })
+})
+
+
+app.put('/api/edit/:id/', (req, res) => {
+    const { id, tableName } = req.params;
+    const newData = req.body;
+    const updateSql = `UPDATE ${tableName} SET ? WHERE id = ?`;
+
+    db.query(updateSql, [newData, id], (error, result) => {
+        if (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.status(200).json({ message: 'Məlumat yeniləndi' });
+        }
+    });
+
 })
 
 app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) });
