@@ -24,19 +24,32 @@ db.connect(err => {
 });
 
 
-app.get('/api/:tableName', (req, res) => {
-    const { tableName } = req.params;
-    const sql = `SELECT * FROM ${tableName}`;
+app.get('/api/:tableName/:formatDate?', (req, res) => {
+    const { tableName, formatDate } = req.params;
+
+    let sql = `SELECT * FROM ${tableName}`;
+
+    if (formatDate === 'true') {
+        sql = `SELECT *, DATE_FORMAT(date, '%Y-%m-%d') AS date FROM ${tableName}`;
+    }
 
     db.query(sql, (err, result) => {
         if (err) {
             console.error(err);
             res.status(500).json({ error: 'Internal Server Error' });
         } else {
-            res.json(result);
+            if (formatDate === 'true') {
+                const formattedResult = result.map(row => {
+                    return { ...row, };
+                });
+                res.json(formattedResult);
+            } else {
+                res.json(result);
+            }
         }
     });
 });
+
 
 app.get('/endpoint/autoProducts', (req, res) => {
     const query = req.query.query.toLowerCase();
@@ -54,17 +67,16 @@ app.get('/endpoint/autoProducts', (req, res) => {
 
 app.post('/api/invoice', (req, res) => {
     const { date, number, customer, formTable } = req.body;
-    const insertSql = 'INSERT INTO invoice (date, number, customer, quantity, total, product_name) VALUES ?';
+    const insertSql = 'INSERT INTO invoice (date, number, customer, quantity, price, product_name) VALUES ?';
 
     const insertValues = formTable.map(item => [
         date,
         number,
         customer,
         parseInt(item.quantity),
-        parseFloat(item.total),
-        product_name,
+        parseFloat(item.price),
+        item.product_name,
     ]);
-    console.log(insertValues);
 
     db.query(insertSql, [insertValues], (err, result) => {
         if (err) {
@@ -206,27 +218,74 @@ app.post('/api/products', (req, res) => {
 });
 
 
-app.put('/api/invoice/:id', (req, res) => {
-    const { id } = req.params;
-    const { updatedRows, date, customer, number } = req.body;
-    const updatedRow = updatedRows[0];
+app.put('/api/invoice', (req, res) => {
+    const { newRows, date, customer, number } = req.body;
 
-    const updateSql = `UPDATE invoice SET quantity=?, total=?, date=?, customer=?, number=? WHERE id=?`;
-    const updateValues = [updatedRow.quantity, updatedRow.total, date, customer, number, id];
+    if (Array.isArray(newRows)) {
+        let totalAffectedRows = 0;
+        let processedRows = 0;
 
-    db.query(updateSql, updateValues, (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ success: false, message: 'Internal server error' });
-        } else {
-            if (result.affectedRows > 0) {
-                res.status(200).json({ success: true, message: 'Məlumat yeniləndi' });
+        newRows.forEach(updatedRow => {
+            const updateSql = `UPDATE invoice SET quantity=?, price=?, product_name=?, date=?, customer=?, number=? WHERE id=?`;
+            const updateValues = [updatedRow.quantity, updatedRow.price, updatedRow.product_name, date, customer, number, updatedRow.id];
+
+            db.query(updateSql, updateValues, (err, result) => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).json({ success: false, message: 'Internal server error' });
+                    return;
+                }
+
+                totalAffectedRows += result.affectedRows;
+                processedRows++;
+
+                if (processedRows === newRows.length) {
+                    if (totalAffectedRows > 0) {
+                        res.status(200).json({ success: true, message: 'Məlumat yeniləndi' });
+                    } else {
+                        res.status(404).json({ success: false, message: 'Record not found' });
+                    }
+                }
+            });
+        });
+    } else {
+        console.error('data is not an array');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
+
+
+app.put('/api/edit/orders', (req, res) => {
+    const { updatedRows } = req.body;
+    let updatesCompleted = 0;
+
+    updatedRows.forEach(updatedRow => {
+        const updateSql = `UPDATE orders SET price=?, quantity=?, product_name=?, units=?, date=?, customer=? WHERE id=?`
+        const updateValues = [updatedRow.price, updatedRow.quantity, updatedRow.product_name, updatedRow.units, updatedRow.date, updatedRow.customer, updatedRow.id];
+
+        db.query(updateSql, updateValues, (error, result) => {
+            if (error) {
+                console.error(error);
+                res.status(500).json({ success: false, message: 'Internal server error' });
             } else {
-                res.status(404).json({ success: false, message: 'Record not found' });
+                if (result.affectedRows > 0) {
+                    console.log(`Row with id ${updatedRow.id} updated successfully`);
+                } else {
+                    console.log(`Row with id ${updatedRow.id} not found`);
+                }
             }
-        }
+
+            updatesCompleted++;
+
+            if (updatesCompleted === updatedRows.length) {
+                res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
+            }
+        });
     });
 });
+
 
 app.put('/api/edit/:tableName', (req, res) => {
     const { tableName } = req.params;
@@ -245,7 +304,7 @@ app.put('/api/edit/:tableName', (req, res) => {
                 if (err) {
                     console.error(err);
                     res.status(500).json({ success: false, message: 'Internal server error' });
-                    return;  
+                    return;
                 }
 
                 totalAffectedRows += result.affectedRows;
@@ -306,7 +365,7 @@ app.delete('/api/delete/:id/:tableName', (req, res) => {
 })
 
 
-app.put('/api/edit/:id/', (req, res) => {
+app.put('/api/edit/:id', (req, res) => {
     const { id, tableName } = req.params;
     const newData = req.body;
     const updateSql = `UPDATE ${tableName} SET ? WHERE id = ?`;
