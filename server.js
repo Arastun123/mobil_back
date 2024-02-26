@@ -271,7 +271,7 @@ app.put('/api/edit/orders', (req, res) => {
                 res.status(500).json({ success: false, message: 'Internal server error' });
             } else {
                 if (result.affectedRows > 0) {
-                    console.log(`Row with id ${updatedRow.id} updated successfully`);
+                    // console.log(`Data updated successfully`);
                 } else {
                     console.log(`Row with id ${updatedRow.id} not found`);
                 }
@@ -286,11 +286,37 @@ app.put('/api/edit/orders', (req, res) => {
     });
 });
 
+app.put('/api/edit/kontragent', (req, res) => {
+    const {updatedRows} = req.body;
+    let updatesCompleted = 0;
+    updatedRows.forEach(updatedRow => {
+        const updateSql = `UPDATE kontragent SET name=?, phone_number=?, tin=?, address=?, type=? WHERE id=?`;
+        const updateValues = [updatedRow.name, updatedRow.phone_number, updatedRow.tin, updatedRow.address, updatedRow.type, updatedRow.id];
+       
+        db.query(updateSql, updateValues, (error, result) => {
+            if (error) {
+                console.error(error);
+                res.status(500).json({ success: false, message: 'Internal server error' });
+            } else {
+                if (result.affectedRows > 0) {
+                    // console.log(`Data updated successfully`);
+                } else {
+                    console.log(`Row with id ${updatedRow.id} not found`);
+                }
+            }
+
+            updatesCompleted++;
+
+            if (updatesCompleted === updatedRows.length) {
+                res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
+            }
+        });
+    })
+})
 
 app.put('/api/edit/:tableName', (req, res) => {
     const { tableName } = req.params;
     const { updatedRows } = req.body;
-    console.log(updatedRows);
 
     if (Array.isArray(updatedRows)) {
         let totalAffectedRows = 0;
