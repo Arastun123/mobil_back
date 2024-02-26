@@ -218,6 +218,104 @@ app.post('/api/products', (req, res) => {
 });
 
 
+const updateRows = async (tableName, updateSql, values, res) => {
+    const sqlQuery = `UPDATE ${tableName} SET ${updateSql} WHERE id=?`;
+
+    try {
+        const result = await new Promise((resolve, reject) => {
+            db.query(sqlQuery, [...values, values[values.length - 1]], (error, result) => {
+                if (error) {
+                    console.error(error);
+                    reject(error);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+
+        if (result.affectedRows > 0) {
+            // console.log(`Data updated successfully`);
+            return true;
+        } else {
+            console.log(`Row not found`);
+            return false;
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return false;
+    }
+};
+
+app.put('/api/edit/orders', async (req, res) => {
+    const { updatedRows } = req.body;
+
+    try {
+        for (const updatedRow of updatedRows) {
+            const updateSql = 'price=?, quantity=?, product_name=?, units=?, date=?, customer=?';
+            const updateValues = [updatedRow.price, updatedRow.quantity, updatedRow.product_name, updatedRow.units, updatedRow.date, updatedRow.customer, updatedRow.id];
+
+            const success = await updateRows('orders', updateSql, updateValues, res);
+
+            if (!success) {
+                console.log(`Failed`);
+            }
+        }
+
+        res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+app.put('/api/edit/kontragent', async (req, res) => {
+    const { updateRows } = req.body;
+    try {
+        for (const updatedRow of updateRows) {
+            const updateSql = `name=?, phone_number=?, tin=?, address=?, type=?`;
+            const updateValues = [updatedRow.name, updatedRow.phone_number, updatedRow.tin, updatedRow.address, updatedRow.type, updatedRow.id];
+
+            const success = await updateRows('kontragent', updateSql, updateValues, res);
+            if (!success) {
+                console.log(`Failed`);
+            }
+        }
+
+        res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+})
+
+app.put('/api/products', (req, res) => {
+    const updatedDataArray = req.body;
+
+    try {
+        for (const updatedData of updatedDataArray) {
+            const { id, name } = updatedData;
+
+            const updateSql = 'UPDATE products SET name = ? WHERE id = ?';
+            const updateValues = [name, id];
+
+            db.query(updateSql, updateValues, (err, result) => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).json({ success: false, message: 'Internal server error' });
+                }
+            });
+        }
+
+        res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+
+
 app.put('/api/invoice', (req, res) => {
     const { newRows, date, customer, number } = req.body;
 
@@ -254,129 +352,6 @@ app.put('/api/invoice', (req, res) => {
     }
 });
 
-
-
-
-app.put('/api/edit/orders', (req, res) => {
-    const { updatedRows } = req.body;
-    let updatesCompleted = 0;
-
-    updatedRows.forEach(updatedRow => {
-        const updateSql = `UPDATE orders SET price=?, quantity=?, product_name=?, units=?, date=?, customer=? WHERE id=?`
-        const updateValues = [updatedRow.price, updatedRow.quantity, updatedRow.product_name, updatedRow.units, updatedRow.date, updatedRow.customer, updatedRow.id];
-
-        db.query(updateSql, updateValues, (error, result) => {
-            if (error) {
-                console.error(error);
-                res.status(500).json({ success: false, message: 'Internal server error' });
-            } else {
-                if (result.affectedRows > 0) {
-                    // console.log(`Data updated successfully`);
-                } else {
-                    console.log(`Row with id ${updatedRow.id} not found`);
-                }
-            }
-
-            updatesCompleted++;
-
-            if (updatesCompleted === updatedRows.length) {
-                res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
-            }
-        });
-    });
-});
-
-app.put('/api/edit/kontragent', (req, res) => {
-    const {updatedRows} = req.body;
-    let updatesCompleted = 0;
-    updatedRows.forEach(updatedRow => {
-        const updateSql = `UPDATE kontragent SET name=?, phone_number=?, tin=?, address=?, type=? WHERE id=?`;
-        const updateValues = [updatedRow.name, updatedRow.phone_number, updatedRow.tin, updatedRow.address, updatedRow.type, updatedRow.id];
-       
-        db.query(updateSql, updateValues, (error, result) => {
-            if (error) {
-                console.error(error);
-                res.status(500).json({ success: false, message: 'Internal server error' });
-            } else {
-                if (result.affectedRows > 0) {
-                    // console.log(`Data updated successfully`);
-                } else {
-                    console.log(`Row with id ${updatedRow.id} not found`);
-                }
-            }
-
-            updatesCompleted++;
-
-            if (updatesCompleted === updatedRows.length) {
-                res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
-            }
-        });
-    })
-})
-
-app.put('/api/edit/:tableName', (req, res) => {
-    const { tableName } = req.params;
-    const { updatedRows } = req.body;
-
-    if (Array.isArray(updatedRows)) {
-        let totalAffectedRows = 0;
-        let processedRows = 0;
-
-        updatedRows.forEach(updatedRow => {
-            const updateSql = `UPDATE ${tableName} SET name=?, category=?, brand=?, price=?, kind=? WHERE id=?`;
-            const updateValues = [updatedRow.name, updatedRow.category, updatedRow.brand, updatedRow.price, updatedRow.kind, updatedRow.id];
-
-            db.query(updateSql, updateValues, (err, result) => {
-                if (err) {
-                    console.error(err);
-                    res.status(500).json({ success: false, message: 'Internal server error' });
-                    return;
-                }
-
-                totalAffectedRows += result.affectedRows;
-                processedRows++;
-
-                if (processedRows === updatedRows.length) {
-                    if (totalAffectedRows > 0) {
-                        res.status(200).json({ success: true, message: 'Məlumat yeniləndi' });
-                    } else {
-                        res.status(404).json({ success: false, message: 'Record not found' });
-                    }
-                }
-            });
-        });
-    } else {
-        console.error('data is not an array');
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-
-app.put('/api/products', (req, res) => {
-    const updatedDataArray = req.body;
-
-    try {
-        for (const updatedData of updatedDataArray) {
-            const { id, name } = updatedData;
-
-            const updateSql = 'UPDATE products SET name = ? WHERE id = ?';
-            const updateValues = [name, id];
-
-            db.query(updateSql, updateValues, (err, result) => {
-                if (err) {
-                    console.error(err);
-                    res.status(500).json({ success: false, message: 'Internal server error' });
-                }
-            });
-        }
-
-        res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-});
-
 app.delete('/api/delete/:id/:tableName', (req, res) => {
     const { id, tableName } = req.params;
     const deleteSql = `DELETE FROM ${tableName} WHERE id = ?`
@@ -388,23 +363,6 @@ app.delete('/api/delete/:id/:tableName', (req, res) => {
             res.status(200).json({ message: 'Məlumat silindi' })
         }
     })
-})
-
-
-app.put('/api/edit/:id', (req, res) => {
-    const { id, tableName } = req.params;
-    const newData = req.body;
-    const updateSql = `UPDATE ${tableName} SET ? WHERE id = ?`;
-
-    db.query(updateSql, [newData, id], (error, result) => {
-        if (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal server error' });
-        } else {
-            res.status(200).json({ message: 'Məlumat yeniləndi' });
-        }
-    });
-
 })
 
 app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) });
