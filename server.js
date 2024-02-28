@@ -68,7 +68,6 @@ app.get('/endpoint/autoProducts', (req, res) => {
 app.post('/api/invoice', (req, res) => {
     const { date, number, customer, formTable } = req.body;
     const insertSql = 'INSERT INTO invoice (date, number, customer, quantity, price, product_name) VALUES ?';
-
     const insertValues = formTable.map(item => [
         date,
         number,
@@ -77,7 +76,7 @@ app.post('/api/invoice', (req, res) => {
         parseFloat(item.price),
         item.product_name,
     ]);
-
+    
     db.query(insertSql, [insertValues], (err, result) => {
         if (err) {
             console.error(err);
@@ -90,8 +89,6 @@ app.post('/api/invoice', (req, res) => {
 
 const insertIntoTable = (req, res, tableName, columns, values) => {
     const insertSql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
-    console.log(insertSql);
-    console.log('values', values);
     db.query(insertSql, values, (err, result) => {
         if (err) {
             console.error(err);
