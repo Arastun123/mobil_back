@@ -351,15 +351,20 @@ app.put('/api/invoice', (req, res) => {
 
 app.delete('/api/delete/:id/:tableName', (req, res) => {
     const { id, tableName } = req.params;
-    const deleteSql = `DELETE FROM ${tableName} WHERE id = ?`
-    db.query(deleteSql, [id, tableName], (error, result) => {
+    const idArray = id.split(',').map(Number); 
+    const placeholders = idArray.map(() => '?').join(','); 
+
+    const deleteSql = `DELETE FROM ${tableName} WHERE id IN (${placeholders})`;
+
+    db.query(deleteSql, idArray, (error, result) => {
         if (error) {
-            console.error(error)
-            res.status(500).json({ error: 'Internal server error' })
+            console.error(error);
+            res.status(500).json({ error: 'Internal server error' });
         } else {
-            res.status(200).json({ message: 'Məlumat silindi' })
+            res.status(200).json({ message: 'Məlumat silindi' });
         }
-    })
-})
+    });
+});
+
 
 app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) });
