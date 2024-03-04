@@ -65,27 +65,49 @@ app.get('/endpoint/autoProducts', (req, res) => {
     });
 });
 
-app.post('/api/invoice', (req, res) => {
+
+app.post('/api/invoice', async (req, res) => {
     const { date, number, customer, formTable } = req.body;
-    const insertSql = 'INSERT INTO invoice (date, number, customer, quantity, price, product_name) VALUES ?';
-    const insertValues = formTable.map(item => [
-        date,
-        number,
-        customer,
-        parseInt(item.quantity),
-        parseFloat(item.price),
-        item.product_name,
-    ]);
-    
-    db.query(insertSql, [insertValues], (err, result) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Internal Server Error' });
-        } else {
-            res.status(200).json({ message: 'Invoice data received successfully' });
-        }
-    });
+
+    try {
+        await db.beginTransaction();
+
+        const insertInvoiceSql = 'INSERT INTO invoice (date, number, customer, quantity, price, product_name) VALUES ?';
+        const invoiceValues = formTable.map(item => [
+            date,
+            number,
+            customer,
+            parseInt(item.quantity),
+            parseFloat(item.price),
+            item.product_name,
+        ]);
+        await db.query(insertInvoiceSql, [invoiceValues]);
+
+        await db.commit();
+
+
+        const insertSql = `INSERT INTO nomenklatura (name, category, brand, price, kind, invoice_number) VALUES ?`;
+        const values = formTable.map(item => [
+            item.product_name,
+            'category',
+            'brand',
+            parseFloat(item.price),
+            'satış',
+            number
+        ]);
+        await db.query(insertSql, [values]);
+
+        await db.commit();
+
+        res.status(200).json({ message: 'Invoice and Nomenklatura data received successfully' });
+    } catch (error) {
+        await db.rollback();
+
+        console.error(error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
 });
+
 
 const insertIntoTable = (req, res, tableName, columns, values) => {
     const insertSql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
@@ -351,8 +373,8 @@ app.put('/api/invoice', (req, res) => {
 
 app.delete('/api/delete/:id/:tableName', (req, res) => {
     const { id, tableName } = req.params;
-    const idArray = id.split(',').map(Number); 
-    const placeholders = idArray.map(() => '?').join(','); 
+    const idArray = id.split(',').map(Number);
+    const placeholders = idArray.map(() => '?').join(',');
 
     const deleteSql = `DELETE FROM ${tableName} WHERE id IN (${placeholders})`;
 
