@@ -66,49 +66,6 @@ app.get('/endpoint/autoProducts', (req, res) => {
 });
 
 
-// app.post('/api/invoice', async (req, res) => {
-//     const { date, number, customer, formTable } = req.body;
-
-//     try {
-//         await db.beginTransaction();
-
-//         const insertInvoiceSql = 'INSERT INTO invoice (date, number, customer, quantity, price, product_name) VALUES ?';
-//         const invoiceValues = formTable.map(item => [
-//             date,
-//             number,
-//             customer,
-//             parseInt(item.quantity),
-//             parseFloat(item.price),
-//             item.product_name,
-//         ]);
-//         await db.query(insertInvoiceSql, [invoiceValues]);
-
-//         await db.commit();
-
-
-//         const insertSql = `INSERT INTO nomenklatura (name, category, brand, price, kind, invoice_id) VALUES ?`;
-//         const values = formTable.map(item => [
-//             item.product_name,
-//             'category',
-//             'brand',
-//             parseFloat(item.price),
-//             'satış',
-//             number
-//         ]);
-//         await db.query(insertSql, [values]);
-
-//         await db.commit();
-
-//         res.status(200).json({ message: 'Invoice and Nomenklatura data received successfully' });
-//     } catch (error) {
-//         await db.rollback();
-
-//         console.error(error);
-//         res.status(500).json({ error: 'Internal Server Error' });
-//     }
-// });
-
-
 const insertIntoTable = (req, res, tableName, columns, values) => {
     const insertSql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
     db.query(insertSql, values, (err, result) => {
@@ -230,7 +187,6 @@ const updateRows = async (tableName, updateSql, values, res) => {
         });
 
         if (result.affectedRows > 0) {
-            // console.log(`Data updated successfully`);
             return true;
         } else {
             console.log(`Row not found`);
@@ -335,41 +291,6 @@ app.put('/api/edit/products', (req, res) => {
     }
 });
 
-app.put('/api/invoice', (req, res) => {
-    const { newRows, date, customer, number } = req.body;
-
-    if (Array.isArray(newRows)) {
-        let totalAffectedRows = 0;
-        let processedRows = 0;
-
-        newRows.forEach(updatedRow => {
-            const updateSql = `UPDATE invoice SET quantity=?, price=?, product_name=?, date=?, customer=?, number=? WHERE id=?`;
-            const updateValues = [updatedRow.quantity, updatedRow.price, updatedRow.product_name, date, customer, number, updatedRow.id];
-
-            db.query(updateSql, updateValues, (err, result) => {
-                if (err) {
-                    console.error(err);
-                    res.status(500).json({ success: false, message: 'Internal server error' });
-                    return;
-                }
-
-                totalAffectedRows += result.affectedRows;
-                processedRows++;
-
-                if (processedRows === newRows.length) {
-                    if (totalAffectedRows > 0) {
-                        res.status(200).json({ success: true, message: 'Məlumat yeniləndi' });
-                    } else {
-                        res.status(404).json({ success: false, message: 'Record not found' });
-                    }
-                }
-            });
-        });
-    } else {
-        console.error('data is not an array');
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
 
 app.delete('/api/delete/:id/:tableName', (req, res) => {
     const { id, tableName } = req.params;
@@ -389,10 +310,8 @@ app.delete('/api/delete/:id/:tableName', (req, res) => {
 });
 
 
-
 app.post('/api/invoice', async (req, res) => {
     const { date, number, customer, formTable } = req.body;
-    // let invoiceIds = [];
 
     try {
         await db.beginTransaction();
@@ -419,7 +338,6 @@ app.post('/api/invoice', async (req, res) => {
                 for (let i = 0; i < result.affectedRows; i++) {
                     invoiceIds.push(result.insertId + i);
                 }
-                console.log(invoiceIds);
                 resolve(result);
             });
         });
@@ -448,55 +366,90 @@ app.post('/api/invoice', async (req, res) => {
 });
 
 
+// app.put('/api/invoice', (req, res) => {
+//     const { newRows, date, customer, number } = req.body;
+
+//     if (Array.isArray(newRows)) {
+//         let totalAffectedRows = 0;
+//         let processedRows = 0;
+
+//         newRows.forEach(updatedRow => {
+//             const updateSql = `UPDATE invoice SET quantity=?, price=?, product_name=?, date=?, customer=?, number=? WHERE id=?`;
+//             const updateValues = [updatedRow.quantity, updatedRow.price, updatedRow.product_name, date, customer, number, updatedRow.id];
+
+//             db.query(updateSql, updateValues, (err, result) => {
+//                 if (err) {
+//                     console.error(err);
+//                     res.status(500).json({ success: false, message: 'Internal server error' });
+//                     return;
+//                 }
+
+//                 totalAffectedRows += result.affectedRows;
+//                 processedRows++;
+
+//                 if (processedRows === newRows.length) {
+//                     if (totalAffectedRows > 0) {
+//                         res.status(200).json({ success: true, message: 'Məlumat yeniləndi' });
+//                     } else {
+//                         res.status(404).json({ success: false, message: 'Record not found' });
+//                     }
+//                 }
+//             });
+//         });
+//     } else {
+//         console.error('data is not an array');
+//         res.status(500).json({ error: 'Internal server error' });
+//     }
+// });
 
 
+app.put('/api/invoice', (req, res) => {
+    const { newRows, date, customer, number } = req.body;
 
-app.put('/api/invoice/:id', async (req, res) => {
-    const { id } = req.params;
-    const { date, customer, quantity, price, product_name } = req.body;
+    if (Array.isArray(newRows)) {
+        let totalAffectedRows = 0;
+        let processedRows = 0;
+        let updatedIds = []; 
 
-    try {
-        await db.beginTransaction();
+        newRows.forEach(updatedRow => {
+            const updateSql = `UPDATE invoice SET quantity=?, price=?, product_name=?, date=?, customer=?, number=? WHERE id=?`;
+            const updateValues = [updatedRow.quantity, updatedRow.price, updatedRow.product_name, date, customer, number, updatedRow.id];
 
-        // Update the 'invoice' table
-        const updateInvoiceSql = 'UPDATE invoice SET date=?, customer=?, quantity=?, price=?, product_name=? WHERE id=?';
-        await db.query(updateInvoiceSql, [date, customer, quantity, price, product_name, id]);
+            db.query(updateSql, updateValues, (err, result) => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).json({ success: false, message: 'Internal server error' });
+                    return;
+                }
 
-        // Update the 'nomenklatura' table if necessary
-        // ...
+                totalAffectedRows += result.affectedRows;
+                processedRows++;
 
-        await db.commit();
+                updatedIds.push(updatedRow.id);
 
-        res.status(200).json({ success: true, message: 'Invoice updated successfully' });
-    } catch (error) {
-        await db.rollback();
+                if (processedRows === newRows.length) {
+                    if (totalAffectedRows > 0) {
+                        const otherTableUpdateSql = `UPDATE nomenklatura SET name=?, price=? WHERE invoice_id = ${updatedRow.id} `;
+                        const otherTableUpdateValues = [ updatedRow.product_name, updatedRow.price];
 
-        console.error(error);
-        res.status(500).json({ success: false, error: 'Internal Server Error' });
-    }
-});
+                        db.query(otherTableUpdateSql, otherTableUpdateValues, (err, otherTableResult) => {
+                            if (err) {
+                                console.error(err);
+                                res.status(500).json({ success: false, message: 'Error updating records in other_table' });
+                                return;
+                            }
 
-
-app.delete('/api/invoice/:id', async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        await db.beginTransaction();
-
-        // Delete the 'invoice' table
-        const deleteInvoiceSql = 'DELETE FROM invoice WHERE id=?';
-        await db.query(deleteInvoiceSql, [id]);
-
-        // Corresponding 'nomenklatura' entries will be deleted due to the CASCADE constraint
-
-        await db.commit();
-
-        res.status(200).json({ success: true, message: 'Invoice deleted successfully' });
-    } catch (error) {
-        await db.rollback();
-
-        console.error(error);
-        res.status(500).json({ success: false, error: 'Internal Server Error' });
+                            res.status(200).json({ success: true, message: 'Məlumat yeniləndi', updatedIds });
+                        });
+                    } else {
+                        res.status(404).json({ success: false, message: 'Record not found' });
+                    }
+                }
+            });
+        });
+    } else {
+        console.error('data is not an array');
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
