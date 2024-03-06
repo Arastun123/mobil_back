@@ -36,7 +36,7 @@ app.get('/api/:tableName/:formatDate?', (req, res) => {
     db.query(sql, (err, result) => {
         if (err) {
             console.error(err);
-            res.status(500).json({ error: 'Internal Server Error' });
+            res.status(500).json({ error: 'Error' });
         } else {
             if (formatDate === 'true') {
                 const formattedResult = result.map(row => {
@@ -56,8 +56,8 @@ app.get('/endpoint/autoProducts', (req, res) => {
 
     db.query('SELECT * FROM products WHERE name LIKE ?', [`%${query}%`], (error, results) => {
         if (error) {
-            console.error('Error executing MySQL query:', error);
-            res.status(500).json({ error: 'Internal Server Error' });
+            console.error(error);
+            res.status(500).json({ error: 'Error' });
             return;
         }
 
@@ -71,9 +71,9 @@ const insertIntoTable = (req, res, tableName, columns, values) => {
     db.query(insertSql, values, (err, result) => {
         if (err) {
             console.error(err);
-            res.status(500).json({ error: 'Internal Server Error' });
+            res.status(500).json({ error: 'Error' });
         } else {
-            res.status(200).json({ message: 'Data received successfully' });
+            res.status(200).json({ message: 'success' });
         }
     });
 };
@@ -123,9 +123,9 @@ app.post('/api/orders', (req, res) => {
     db.query(insertSql, [insertValues], (err, result) => {
         if (err) {
             console.error(err);
-            res.status(500).json({ error: 'Internal Server Error' });
+            res.status(500).json({ error: 'Error' });
         } else {
-            res.status(200).json({ message: 'Invoice data received successfully' });
+            res.status(200).json({ message: 'success' });
         }
     });
 });
@@ -137,6 +137,61 @@ app.post('/api/cassa_orders', (req, res) => {
     insertIntoTable(req, res, tableName, columns, values);
 });
 
+app.post('/api/invoice', async (req, res) => {
+    const { date, number, customer, formTable } = req.body;
+
+    try {
+        await db.beginTransaction();
+
+        const insertInvoiceSql = 'INSERT INTO invoice (date, number, customer, quantity, price, product_name) VALUES ?';
+        const invoiceValues = formTable.map(item => [
+            date,
+            number,
+            customer,
+            parseInt(item.quantity),
+            parseFloat(item.price),
+            item.product_name,
+        ]);
+
+        const invoiceIds = [];
+
+        const result = await new Promise((resolve, reject) => {
+            db.query(insertInvoiceSql, [invoiceValues], (error, result) => {
+                if (error) {
+                    console.error(error);
+                    reject(error);
+                    return;
+                }
+                for (let i = 0; i < result.affectedRows; i++) {
+                    invoiceIds.push(result.insertId + i);
+                }
+                resolve(result);
+            });
+        });
+
+        const insertSql = `INSERT INTO nomenklatura (name, category, brand, price, kind, invoice_id) VALUES ?`;
+        const values = formTable.map((item, index) => [
+            item.product_name,
+            'category',
+            'brand',
+            parseFloat(item.price),
+            'satış',
+            invoiceIds[index],
+        ]);
+
+        await db.query(insertSql, [values]);
+
+        await db.commit();
+
+        res.status(200).json({ message: 'success' });
+    } catch (error) {
+        await db.rollback();
+
+        console.error(error);
+        res.status(500).json({ error: 'Error' });
+    }
+});
+
 
 app.post('/api/products', (req, res) => {
     const { formTable } = req.body;
@@ -146,7 +201,7 @@ app.post('/api/products', (req, res) => {
     db.query(selectSql, [newNames], (selectErr, selectResult) => {
         if (selectErr) {
             console.error(selectErr);
-            res.status(500).json({ error: 'Internal server error' });
+            res.status(500).json({ error: 'error' });
             return;
         }
         const existingNames = selectResult.map(row => row.name);
@@ -159,13 +214,13 @@ app.post('/api/products', (req, res) => {
             db.query(insertSql, [insertValues], (insertErr, insertResult) => {
                 if (insertErr) {
                     console.error(insertErr);
-                    res.status(500).json({ error: 'Internal server error' });
+                    res.status(500).json({ error: 'error' });
                 } else {
-                    res.status(200).json({ message: 'Data received' });
+                    res.status(200).json({ message: 'received' });
                 }
             });
         } else {
-            res.status(400).json({ message: 'All data already exists in the database' });
+            res.status(400).json({ message: 'data exists' });
         }
     });
 });
@@ -217,7 +272,7 @@ app.put('/api/edit/orders', async (req, res) => {
         res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'error' });
     }
 });
 
@@ -237,7 +292,7 @@ app.put('/api/edit/kontragent', async (req, res) => {
         res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'error' });
     }
 })
 
@@ -256,7 +311,7 @@ app.put('/api/edit/products', (req, res) => {
             db.query(selectSql, selectValues, (selectErr, selectResult) => {
                 if (selectErr) {
                     console.error(selectErr);
-                    res.status(500).json({ success: false, message: 'Internal server error' });
+                    res.status(500).json({ success: false, message: 'error' });
                 } else {
                     if (selectResult.length > 0) {
                         nameExists = true;
@@ -268,7 +323,7 @@ app.put('/api/edit/products', (req, res) => {
                         db.query(updateSql, updateValues, (updateErr, updateResult) => {
                             if (updateErr) {
                                 console.error(updateErr);
-                                res.status(500).json({ success: false, message: 'Internal server error' });
+                                res.status(500).json({ success: false, message: 'error' });
                             }
                         });
                     }
@@ -287,121 +342,9 @@ app.put('/api/edit/products', (req, res) => {
         }
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'error' });
     }
 });
-
-
-app.delete('/api/delete/:id/:tableName', (req, res) => {
-    const { id, tableName } = req.params;
-    const idArray = id.split(',').map(Number);
-    const placeholders = idArray.map(() => '?').join(',');
-
-    const deleteSql = `DELETE FROM ${tableName} WHERE id IN (${placeholders})`;
-
-    db.query(deleteSql, idArray, (error, result) => {
-        if (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal server error' });
-        } else {
-            res.status(200).json({ message: 'Məlumat silindi' });
-        }
-    });
-});
-
-
-app.post('/api/invoice', async (req, res) => {
-    const { date, number, customer, formTable } = req.body;
-
-    try {
-        await db.beginTransaction();
-
-        const insertInvoiceSql = 'INSERT INTO invoice (date, number, customer, quantity, price, product_name) VALUES ?';
-        const invoiceValues = formTable.map(item => [
-            date,
-            number,
-            customer,
-            parseInt(item.quantity),
-            parseFloat(item.price),
-            item.product_name,
-        ]);
-
-        const invoiceIds = [];
-
-        const result = await new Promise((resolve, reject) => {
-            db.query(insertInvoiceSql, [invoiceValues], (error, result) => {
-                if (error) {
-                    console.error(error);
-                    reject(error);
-                    return;
-                }
-                for (let i = 0; i < result.affectedRows; i++) {
-                    invoiceIds.push(result.insertId + i);
-                }
-                resolve(result);
-            });
-        });
-
-        const insertSql = `INSERT INTO nomenklatura (name, category, brand, price, kind, invoice_id) VALUES ?`;
-        const values = formTable.map((item, index) => [
-            item.product_name,
-            'category',
-            'brand',
-            parseFloat(item.price),
-            'satış',
-            invoiceIds[index],
-        ]);
-
-        await db.query(insertSql, [values]);
-
-        await db.commit();
-
-        res.status(200).json({ message: 'Invoice and Nomenklatura data received successfully' });
-    } catch (error) {
-        await db.rollback();
-
-        console.error(error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
-
-
-// app.put('/api/invoice', (req, res) => {
-//     const { newRows, date, customer, number } = req.body;
-
-//     if (Array.isArray(newRows)) {
-//         let totalAffectedRows = 0;
-//         let processedRows = 0;
-
-//         newRows.forEach(updatedRow => {
-//             const updateSql = `UPDATE invoice SET quantity=?, price=?, product_name=?, date=?, customer=?, number=? WHERE id=?`;
-//             const updateValues = [updatedRow.quantity, updatedRow.price, updatedRow.product_name, date, customer, number, updatedRow.id];
-
-//             db.query(updateSql, updateValues, (err, result) => {
-//                 if (err) {
-//                     console.error(err);
-//                     res.status(500).json({ success: false, message: 'Internal server error' });
-//                     return;
-//                 }
-
-//                 totalAffectedRows += result.affectedRows;
-//                 processedRows++;
-
-//                 if (processedRows === newRows.length) {
-//                     if (totalAffectedRows > 0) {
-//                         res.status(200).json({ success: true, message: 'Məlumat yeniləndi' });
-//                     } else {
-//                         res.status(404).json({ success: false, message: 'Record not found' });
-//                     }
-//                 }
-//             });
-//         });
-//     } else {
-//         console.error('data is not an array');
-//         res.status(500).json({ error: 'Internal server error' });
-//     }
-// });
-
 
 app.put('/api/invoice', async (req, res) => {
     const { newRows, date, customer, number } = req.body;
@@ -435,20 +378,34 @@ app.put('/api/invoice', async (req, res) => {
             await Promise.all(updatePromises);
 
             if (totalAffectedRows > 0) {
-                res.status(404).json({ success: false, message: 'Record not found' });
+                res.status(404).json({ success: false, message: 'not found' });
             } else {
                 res.status(200).json({ success: true, message: 'Məlumat yeniləndi' });
             }
         } catch (error) {
             console.error(error);
-            res.status(500).json({ success: false, message: 'Internal server error' });
+            res.status(500).json({ success: false, message: 'error' });
         }
     } else {
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'error' });
     }
 });
 
+app.delete('/api/delete/:id/:tableName', (req, res) => {
+    const { id, tableName } = req.params;
+    const idArray = id.split(',').map(Number);
+    const placeholders = idArray.map(() => '?').join(',');
 
+    const deleteSql = `DELETE FROM ${tableName} WHERE id IN (${placeholders})`;
 
+    db.query(deleteSql, idArray, (error, result) => {
+        if (error) {
+            console.error(error);
+            res.status(500).json({ error: 'error' });
+        } else {
+            res.status(200).json({ message: 'Məlumat silindi' });
+        }
+    });
+});
 
 app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) }); ``
