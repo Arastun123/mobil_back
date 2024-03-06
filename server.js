@@ -403,55 +403,51 @@ app.post('/api/invoice', async (req, res) => {
 // });
 
 
-app.put('/api/invoice', (req, res) => {
+app.put('/api/invoice', async (req, res) => {
     const { newRows, date, customer, number } = req.body;
 
     if (Array.isArray(newRows)) {
-        let totalAffectedRows = 0;
-        let processedRows = 0;
-        let updatedIds = []; 
+        try {
+            let totalAffectedRows = 0;
+            let updatedIds = [];
 
-        newRows.forEach(updatedRow => {
-            const updateSql = `UPDATE invoice SET quantity=?, price=?, product_name=?, date=?, customer=?, number=? WHERE id=?`;
-            const updateValues = [updatedRow.quantity, updatedRow.price, updatedRow.product_name, date, customer, number, updatedRow.id];
+            const updatePromises = newRows.map(async (updatedRow) => {
+                const updateSql = `UPDATE invoice SET quantity=?, price=?, product_name=?, date=?, customer=?, number=? WHERE id=?`;
+                const updateValues = [updatedRow.quantity, updatedRow.price, updatedRow.product_name, date, customer, number, updatedRow.id];
 
-            db.query(updateSql, updateValues, (err, result) => {
-                if (err) {
-                    console.error(err);
-                    res.status(500).json({ success: false, message: 'Internal server error' });
-                    return;
-                }
+                try {
+                    const result = await db.query(updateSql, updateValues);
+                    totalAffectedRows += result.affectedRows;
+                    updatedIds.push(updatedRow.id);
 
-                totalAffectedRows += result.affectedRows;
-                processedRows++;
 
-                updatedIds.push(updatedRow.id);
+                    const otherTableUpdateSql = `UPDATE nomenklatura SET name=?, price=? WHERE invoice_id = ?`;
+                    const otherTableUpdateValues = [updatedRow.product_name, updatedRow.price];
 
-                if (processedRows === newRows.length) {
-                    if (totalAffectedRows > 0) {
-                        const otherTableUpdateSql = `UPDATE nomenklatura SET name=?, price=? WHERE invoice_id = ${updatedRow.id} `;
-                        const otherTableUpdateValues = [ updatedRow.product_name, updatedRow.price];
+                    const otherTableResult = await db.query(otherTableUpdateSql, [...otherTableUpdateValues, updatedRow.id]);
 
-                        db.query(otherTableUpdateSql, otherTableUpdateValues, (err, otherTableResult) => {
-                            if (err) {
-                                console.error(err);
-                                res.status(500).json({ success: false, message: 'Error updating records in other_table' });
-                                return;
-                            }
-
-                            res.status(200).json({ success: true, message: 'Məlumat yeniləndi', updatedIds });
-                        });
-                    } else {
-                        res.status(404).json({ success: false, message: 'Record not found' });
-                    }
+                } catch (error) {
+                    console.error(error);
+                    throw error;
                 }
             });
-        });
+
+            await Promise.all(updatePromises);
+
+            if (totalAffectedRows > 0) {
+                res.status(404).json({ success: false, message: 'Record not found' });
+            } else {
+                res.status(200).json({ success: true, message: 'Məlumat yeniləndi' });
+            }
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
     } else {
-        console.error('data is not an array');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
 
 
 
