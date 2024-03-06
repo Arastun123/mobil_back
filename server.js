@@ -66,47 +66,47 @@ app.get('/endpoint/autoProducts', (req, res) => {
 });
 
 
-app.post('/api/invoice', async (req, res) => {
-    const { date, number, customer, formTable } = req.body;
+// app.post('/api/invoice', async (req, res) => {
+//     const { date, number, customer, formTable } = req.body;
 
-    try {
-        await db.beginTransaction();
+//     try {
+//         await db.beginTransaction();
 
-        const insertInvoiceSql = 'INSERT INTO invoice (date, number, customer, quantity, price, product_name) VALUES ?';
-        const invoiceValues = formTable.map(item => [
-            date,
-            number,
-            customer,
-            parseInt(item.quantity),
-            parseFloat(item.price),
-            item.product_name,
-        ]);
-        await db.query(insertInvoiceSql, [invoiceValues]);
+//         const insertInvoiceSql = 'INSERT INTO invoice (date, number, customer, quantity, price, product_name) VALUES ?';
+//         const invoiceValues = formTable.map(item => [
+//             date,
+//             number,
+//             customer,
+//             parseInt(item.quantity),
+//             parseFloat(item.price),
+//             item.product_name,
+//         ]);
+//         await db.query(insertInvoiceSql, [invoiceValues]);
 
-        await db.commit();
+//         await db.commit();
 
 
-        const insertSql = `INSERT INTO nomenklatura (name, category, brand, price, kind, invoice_number) VALUES ?`;
-        const values = formTable.map(item => [
-            item.product_name,
-            'category',
-            'brand',
-            parseFloat(item.price),
-            'satış',
-            number
-        ]);
-        await db.query(insertSql, [values]);
+//         const insertSql = `INSERT INTO nomenklatura (name, category, brand, price, kind, invoice_id) VALUES ?`;
+//         const values = formTable.map(item => [
+//             item.product_name,
+//             'category',
+//             'brand',
+//             parseFloat(item.price),
+//             'satış',
+//             number
+//         ]);
+//         await db.query(insertSql, [values]);
 
-        await db.commit();
+//         await db.commit();
 
-        res.status(200).json({ message: 'Invoice and Nomenklatura data received successfully' });
-    } catch (error) {
-        await db.rollback();
+//         res.status(200).json({ message: 'Invoice and Nomenklatura data received successfully' });
+//     } catch (error) {
+//         await db.rollback();
 
-        console.error(error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
+//         console.error(error);
+//         res.status(500).json({ error: 'Internal Server Error' });
+//     }
+// });
 
 
 const insertIntoTable = (req, res, tableName, columns, values) => {
@@ -389,4 +389,117 @@ app.delete('/api/delete/:id/:tableName', (req, res) => {
 });
 
 
-app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) });
+
+app.post('/api/invoice', async (req, res) => {
+    const { date, number, customer, formTable } = req.body;
+    // let invoiceIds = [];
+
+    try {
+        await db.beginTransaction();
+
+        const insertInvoiceSql = 'INSERT INTO invoice (date, number, customer, quantity, price, product_name) VALUES ?';
+        const invoiceValues = formTable.map(item => [
+            date,
+            number,
+            customer,
+            parseInt(item.quantity),
+            parseFloat(item.price),
+            item.product_name,
+        ]);
+
+        const invoiceIds = [];
+
+        const result = await new Promise((resolve, reject) => {
+            db.query(insertInvoiceSql, [invoiceValues], (error, result) => {
+                if (error) {
+                    console.error(error);
+                    reject(error);
+                    return;
+                }
+                for (let i = 0; i < result.affectedRows; i++) {
+                    invoiceIds.push(result.insertId + i);
+                }
+                console.log(invoiceIds);
+                resolve(result);
+            });
+        });
+
+        const insertSql = `INSERT INTO nomenklatura (name, category, brand, price, kind, invoice_id) VALUES ?`;
+        const values = formTable.map((item, index) => [
+            item.product_name,
+            'category',
+            'brand',
+            parseFloat(item.price),
+            'satış',
+            invoiceIds[index],
+        ]);
+
+        await db.query(insertSql, [values]);
+
+        await db.commit();
+
+        res.status(200).json({ message: 'Invoice and Nomenklatura data received successfully' });
+    } catch (error) {
+        await db.rollback();
+
+        console.error(error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+
+
+
+app.put('/api/invoice/:id', async (req, res) => {
+    const { id } = req.params;
+    const { date, customer, quantity, price, product_name } = req.body;
+
+    try {
+        await db.beginTransaction();
+
+        // Update the 'invoice' table
+        const updateInvoiceSql = 'UPDATE invoice SET date=?, customer=?, quantity=?, price=?, product_name=? WHERE id=?';
+        await db.query(updateInvoiceSql, [date, customer, quantity, price, product_name, id]);
+
+        // Update the 'nomenklatura' table if necessary
+        // ...
+
+        await db.commit();
+
+        res.status(200).json({ success: true, message: 'Invoice updated successfully' });
+    } catch (error) {
+        await db.rollback();
+
+        console.error(error);
+        res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+});
+
+
+app.delete('/api/invoice/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await db.beginTransaction();
+
+        // Delete the 'invoice' table
+        const deleteInvoiceSql = 'DELETE FROM invoice WHERE id=?';
+        await db.query(deleteInvoiceSql, [id]);
+
+        // Corresponding 'nomenklatura' entries will be deleted due to the CASCADE constraint
+
+        await db.commit();
+
+        res.status(200).json({ success: true, message: 'Invoice deleted successfully' });
+    } catch (error) {
+        await db.rollback();
+
+        console.error(error);
+        res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+});
+
+
+
+app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) }); ``
