@@ -65,6 +65,20 @@ app.get('/endpoint/autoProducts', (req, res) => {
     });
 });
 
+app.get("/endpoint/autoFill", (req, res) => {
+    const query = req.query.query.toLocaleLowerCase();
+
+    db.query('SELECT * FROM nomenklatura WHERE name LIKE ?', [`%${query}%`], (error, result) => {
+        if(error){
+            console.error(error);
+            res.status(500).json( {error: "Error"} );
+            return
+        }
+
+        res.json(result)
+    })
+})
+
 
 const insertIntoTable = (req, res, tableName, columns, values) => {
     const insertSql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
@@ -348,7 +362,7 @@ app.put('/api/edit/products', (req, res) => {
 
 app.put('/api/invoice', async (req, res) => {
     const { newRows, date, customer, number } = req.body;
-
+    console.log("salam");
     if (Array.isArray(newRows)) {
         try {
             let totalAffectedRows = 0;
@@ -408,4 +422,4 @@ app.delete('/api/delete/:id/:tableName', (req, res) => {
     });
 });
 
-app.listen(PORT, () => { console.log(`http://192.168.88.44:${PORT}`) }); ``
+app.listen(PORT, () => { console.log(`http://192.168.88.11:${PORT}`) }); ``
