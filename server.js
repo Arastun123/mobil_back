@@ -50,8 +50,9 @@ app.get('/api/:tableName/:formatDate?', (req, res) => {
     });
 });
 
+
 app.get("/endpoint/autoFill", (req, res) => {
-    const tableName = req.query.tableName; 
+    const tableName = req.query.tableName;
     const query = req.query.query.toLocaleLowerCase();
 
     if (!tableName) {
@@ -62,13 +63,15 @@ app.get("/endpoint/autoFill", (req, res) => {
 
     db.query(sqlQuery, [`%${query}%`], (error, result) => {
         if (error) {
-            console.error(error);
-            return res.status(500).json({ error: "Error" });
+            console.error("Database query error:", error);
+            return res.status(500).json({ error: "Internal server error" });
         }
 
         res.json(result);
     });
 });
+
+
 
 const insertIntoTable = (req, res, tableName, columns, values) => {
     const insertSql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
