@@ -52,22 +52,21 @@ app.get('/api/:tableName/:formatDate?', (req, res) => {
 
 
 app.get("/endpoint/autoFill", (req, res) => {
-    const tableName = req.query.tableName;
+    const {tableName, columnName} = req.query;
     const query = req.query.query.toLocaleLowerCase();
 
     if (!tableName) {
         return res.status(400).json({ error: "tableName parameter is missing" });
     }
 
-    const sqlQuery = `SELECT * FROM ${tableName} WHERE name LIKE ?`;
-
+    const sqlQuery = `SELECT * FROM ${tableName} WHERE ${columnName} LIKE ?`;
+    
     db.query(sqlQuery, [`%${query}%`], (error, result) => {
         if (error) {
             console.error("Database query error:", error);
             return res.status(500).json({ error: "Internal server error" });
         }
-
-        res.json(result);
+        
     });
 });
 
