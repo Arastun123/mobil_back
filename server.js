@@ -115,12 +115,13 @@ app.post('/api/routes', (req, res) => {
 
 app.post('/api/orders', (req, res) => {
 
-    const { date, customer, formTable } = req.body;
-    const insertSql = 'INSERT INTO orders (date, customer, product_name, price, quantity, units) VALUES ?';
+    const { date, customer, number, formTable } = req.body;
+    const insertSql = 'INSERT INTO orders (date, customer, number, product_name, price, quantity, units) VALUES ?';
 
     const insertValues = formTable.map(item => [
         date,
         customer,
+        number,
         item.product_name,
         parseFloat(item.price),
         parseInt(item.quantity),
@@ -233,7 +234,6 @@ app.post('/api/products', (req, res) => {
 
 const updateRows = async (tableName, updateSql, values, res) => {
     const sqlQuery = `UPDATE ${tableName} SET ${updateSql} WHERE id=?`;
-
     try {
         const result = await new Promise((resolve, reject) => {
             db.query(sqlQuery, [...values, values[values.length - 1]], (error, result) => {
@@ -260,12 +260,13 @@ const updateRows = async (tableName, updateSql, values, res) => {
 };
 
 app.put('/api/edit/orders', async (req, res) => {
-    const { updatedRows } = req.body;
+    const { updatedRows } = req.body; 
 
     try {
-        for (const updatedRow of updatedRows) {
-            const updateSql = 'price=?, quantity=?, product_name=?, units=?, date=?, customer=?';
-            const updateValues = [updatedRow.price, updatedRow.quantity, updatedRow.product_name, updatedRow.units, updatedRow.date, updatedRow.customer, updatedRow.id];
+        const { newUpdatedRows, date, customer, number } = updatedRows; 
+        for (const rows of newUpdatedRows) {
+            const updateSql = 'date=?, customer=?, number=?, price=?, quantity=?, product_name=?, units=?';
+            const updateValues = [date, customer, number, rows.price, rows.quantity, rows.product_name, rows.units, rows.id];
 
             const success = await updateRows('orders', updateSql, updateValues, res);
 
@@ -280,6 +281,26 @@ app.put('/api/edit/orders', async (req, res) => {
         res.status(500).json({ success: false, message: 'error' });
     }
 });
+
+
+app.put('/api/edit/nomenklatura', async (req, res) => {
+    const { updatedRows } = req.body;
+    try {
+        for (const updatedRow of updatedRows) {
+            const updateSql = 'name=?, category=?, brand=?, price=?, kind=?, invoice_id=?';
+            const updateValues = [updatedRow.name, updatedRow.category, updatedRow.brand, updatedRow.price, updatedRow.kind, updatedRow.invoice_id, updatedRow.id];
+
+            const success = await updateRows('nomenklatura', updateSql, updateValues, res);
+
+            if (!success) console.log('Failed');
+        }
+        res.status(200).json({ success: true, message: 'Məlumatlar yeniləndi' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'error' });
+    }
+});
+
 
 app.put('/api/edit/kontragent', async (req, res) => {
     const { updatedRows } = req.body;
