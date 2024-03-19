@@ -61,15 +61,15 @@ app.get("/endpoint/autoFill", (req, res) => {
 
     const sqlQuery = `SELECT * FROM ${tableName} WHERE ${columnName} LIKE ?`;
     
-    db.query(sqlQuery, [`%${query}%`], (error, result) => {
+    db.query(sqlQuery, [`${query}%`], (error, result) => {
         if (error) {
             console.error("Database query error:", error);
             return res.status(500).json({ error: "Internal server error" });
         }
         
+        res.json(result);
     });
 });
-
 
 
 const insertIntoTable = (req, res, tableName, columns, values) => {
@@ -186,18 +186,66 @@ app.post('/api/invoice', async (req, res) => {
             invoiceIds[index],
         ]);
 
-        await db.query(insertSql, [values]);
+        const newNames = formTable.map(item => item.product_name);
+        const selectSql = 'SELECT name FROM products WHERE name IN (?)';
 
-        await db.commit();
+        db.query(selectSql, [newNames], (selectErr, selectResult) => {
+            if (selectErr) {
+                console.error(selectErr);
+                res.status(500).json({ error: 'error' });
+                return;
+            }
+            const existingNames = selectResult.map(row => row.name);
+            const namesToInsert = newNames.filter(name => !existingNames.includes(name));
+    
+            if (namesToInsert.length > 0) {
+                const insertSql = 'INSERT INTO products (name) VALUES ?';
+                const insertValues = namesToInsert.map(name => [name]);
+    
+                db.query(insertSql, [insertValues], (insertErr, insertResult) => {
+                    if (insertErr) {
+                        console.error(insertErr);
+                        res.status(500).json({ error: 'error' });
+                    } else {
+                        insertRemainingData(); // Continue with the rest of the code
+                    }
+                });
+            } else {
+                insertRemainingData(); // Continue with the rest of the code
+            }
+        });
 
-        res.status(200).json({ message: 'success' });
+        function insertRemainingData() {
+            db.query(insertSql, [values], (err, result) => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).json({ error: 'Error' });
+                    return;
+                }
+                db.commit((commitErr) => {
+                    if (commitErr) {
+                        console.error(commitErr);
+                        db.rollback((rollbackErr) => {
+                            if (rollbackErr) {
+                                console.error(rollbackErr);
+                                res.status(500).json({ error: 'Error' });
+                            } else {
+                                res.status(500).json({ error: 'Error' });
+                            }
+                        });
+                    } else {
+                        res.status(200).json({ message: 'success' });
+                    }
+                });
+            });
+        }
     } catch (error) {
         await db.rollback();
-
         console.error(error);
         res.status(500).json({ error: 'Error' });
     }
 });
+
 
 app.post('/api/products', (req, res) => {
     const { formTable } = req.body;
@@ -281,7 +329,6 @@ app.put('/api/edit/orders', async (req, res) => {
     }
 });
 
-
 app.put('/api/edit/nomenklatura', async (req, res) => {
     const { updatedRows } = req.body;
     try {
@@ -299,7 +346,6 @@ app.put('/api/edit/nomenklatura', async (req, res) => {
         res.status(500).json({ success: false, message: 'error' });
     }
 });
-
 
 app.put('/api/edit/kontragent', async (req, res) => {
     const { updatedRows } = req.body;
@@ -433,4 +479,4 @@ app.delete('/api/delete/:id/:tableName', (req, res) => {
     });
 });
 
-app.listen(PORT, () => { console.log(`http://192.168.88.11:${PORT}`) }); ``
+app.listen(PORT, () => { console.log(`http://192.168.88.40:${PORT}`) }); ``
